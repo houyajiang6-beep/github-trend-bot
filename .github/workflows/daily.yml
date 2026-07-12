@@ -116,36 +116,67 @@ jobs:
           python - <<'PY'
           import json
           import os
+          from datetime import datetime
           from pathlib import Path
+          from zoneinfo import ZoneInfo
 
           status_path = Path("logs/actions-status.json")
           summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
-          if not status_path.exists():
-              summary_path.write_text(
-                  "## GitHub Trend Bot\n\n运行状态文件未生成，请检查失败步骤。\n",
-                  encoding="utf-8",
-              )
+          status = {}
+          if status_path.exists():
+              status = json.loads(status_path.read_text(encoding="utf-8"))
+          else:
               print("::error title=Run status unavailable::logs/actions-status.json was not generated")
-              raise SystemExit(0)
 
-          status = json.loads(status_path.read_text(encoding="utf-8"))
-          github = status["github"]
-          deepseek = status["deepseek"]
-          report = status["report"]
-          gmail = status["gmail"]
+          github = status.get("github", {})
+          deepseek = status.get("deepseek", {})
+          gmail = status.get("gmail", {})
+          html_generated = any(Path("reports").glob("*.html"))
+          json_generated = any(Path("reports").glob("*.json"))
+          github_success = bool(github.get("success"))
+          deepseek_success = bool(deepseek.get("success"))
+          gmail_success = bool(gmail.get("success"))
+          overall_success = all(
+              (
+                  github_success,
+                  deepseek_success,
+                  html_generated,
+                  json_generated,
+                  gmail_success,
+              )
+          )
+          run_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime(
+              "%Y-%m-%d %H:%M:%S %Z"
+          )
           lines = [
-              "## GitHub Trend Bot 运行摘要",
+              "## GitHub Trend Bot Report",
               "",
-              f"- GitHub 抓取：{'成功' if github['success'] else '失败'}（{github['repositories']} 个项目）",
-              f"- DeepSeek：{'成功' if deepseek['success'] else '降级'}（{deepseek['provider']} / {deepseek['model']}）",
-              f"- 报告生成：{'成功' if report['success'] else '失败'}",
-              f"- Gmail：{'跳过' if gmail['skipped'] else ('成功' if gmail['success'] else '失败')}",
-              f"- AI 兜底：{'否' if not deepseek['fallback'] else '是'}",
+              f"运行时间：{run_time}",
+              "",
+              "### GitHub抓取",
+              f"- 状态：{'成功' if github_success else '失败'}",
+              f"- 获取项目数量：{github.get('repositories', 0)}",
+              "",
+              "### DeepSeek",
+              f"- 状态：{'成功' if deepseek_success else '失败'}",
+              f"- 是否触发 fallback：{'是' if deepseek.get('fallback', True) else '否'}",
+              "",
+              "### 报告生成",
+              f"- HTML：{'已生成' if html_generated else '未生成'}",
+              f"- JSON：{'已生成' if json_generated else '未生成'}",
+              "",
+              "### Gmail",
+              f"- 状态：{'成功' if gmail_success else '失败'}",
+              "",
+              "### 整体状态",
+              f"**{'SUCCESS' if overall_success else 'FAILED'}**",
           ]
-          if deepseek["fallback"]:
-              lines.append(f"- 降级原因：`{deepseek['reason']}`")
-              print(f"::warning title=DeepSeek fallback::{deepseek['reason']}")
-          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          if deepseek.get("fallback", True):
+              reason = deepseek.get("reason", "DeepSeek status unavailable")
+              lines.insert(-2, f"- fallback 原因：`{reason}`")
+              print(f"::warning title=DeepSeek fallback::{reason}")
+          with summary_path.open("a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines) + "\n")
           PY
 
       - name: Print failure diagnostics
