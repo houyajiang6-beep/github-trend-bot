@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# 服务器系统时区必须为 Asia/Shanghai。每天北京时间 08:00 执行。
+0 8 * * * githubbot flock -n /tmp/github-trend-bot.cron.lock /opt/github-trend-bot/.venv/bin/python /opt/github-trend-bot/production_runner.py >> /opt/github-trend-bot/logs/cron.log 2>&1

@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.tar.gz
+.env
+credentials*.json
+token*.json
+logs/*
+!logs/.gitkeep
+reports/*
+!reports/.gitkeep
