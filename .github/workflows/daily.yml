@@ -109,7 +109,44 @@ jobs:
           python main.py 2>&1 | tee logs/actions-run.log
           echo "::endgroup::"
 
-          echo "Daily report completed successfully." >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish run summary
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          status_path = Path("logs/actions-status.json")
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          if not status_path.exists():
+              summary_path.write_text(
+                  "## GitHub Trend Bot\n\n运行状态文件未生成，请检查失败步骤。\n",
+                  encoding="utf-8",
+              )
+              print("::error title=Run status unavailable::logs/actions-status.json was not generated")
+              raise SystemExit(0)
+
+          status = json.loads(status_path.read_text(encoding="utf-8"))
+          github = status["github"]
+          deepseek = status["deepseek"]
+          report = status["report"]
+          gmail = status["gmail"]
+          lines = [
+              "## GitHub Trend Bot 运行摘要",
+              "",
+              f"- GitHub 抓取：{'成功' if github['success'] else '失败'}（{github['repositories']} 个项目）",
+              f"- DeepSeek：{'成功' if deepseek['success'] else '降级'}（{deepseek['provider']} / {deepseek['model']}）",
+              f"- 报告生成：{'成功' if report['success'] else '失败'}",
+              f"- Gmail：{'跳过' if gmail['skipped'] else ('成功' if gmail['success'] else '失败')}",
+              f"- AI 兜底：{'否' if not deepseek['fallback'] else '是'}",
+          ]
+          if deepseek["fallback"]:
+              lines.append(f"- 降级原因：`{deepseek['reason']}`")
+              print(f"::warning title=DeepSeek fallback::{deepseek['reason']}")
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
 
       - name: Print failure diagnostics
         if: failure()

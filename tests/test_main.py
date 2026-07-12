@@ -30,7 +30,11 @@ class MainFallbackTests(unittest.TestCase):
     def test_missing_deepseek_key_still_writes_fallback_report(self) -> None:
         with TemporaryDirectory() as directory:
             report_dir = Path(directory)
-            settings = Settings(deepseek_api_key="", report_dir=report_dir)
+            settings = Settings(
+                deepseek_api_key="",
+                report_dir=report_dir,
+                log_dir=report_dir / "logs",
+            )
             with (
                 patch.object(main, "settings", settings),
                 patch.object(
@@ -58,6 +62,12 @@ class MainFallbackTests(unittest.TestCase):
             self.assertIn("voiceover_30s", content)
             self.assertIn("xiaohongshu_note", content)
             self.assertIn("video_topics", content)
+            status = json.loads(
+                (settings.log_dir / "actions-status.json").read_text(encoding="utf-8")
+            )
+            self.assertFalse(status["deepseek"]["success"])
+            self.assertTrue(status["deepseek"]["fallback"])
+            self.assertTrue(status["report"]["success"])
 
 
 if __name__ == "__main__":

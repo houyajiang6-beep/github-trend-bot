@@ -17,6 +17,17 @@ LOGGER = logging.getLogger(__name__)
 class DeepSeekAPIError(RuntimeError):
     """A sanitized, user-facing DeepSeek request failure."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        error_type: str = "DeepSeekAPIError",
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.error_type = error_type
+
 
 def _error_details(exc: Exception) -> tuple[str, bool]:
     status_code = getattr(exc, "status_code", None)
@@ -28,6 +39,8 @@ def _error_details(exc: Exception) -> tuple[str, bool]:
         return "DeepSeek API 请求限流，请稍后重试", True
     if isinstance(status_code, int) and status_code >= 500:
         return f"DeepSeek 服务暂时不可用（HTTP {status_code}）", True
+    if isinstance(exc, ValueError) and "DEEPSEEK_API_KEY" in str(exc):
+        return "DeepSeek 配置缺少 DEEPSEEK_API_KEY", False
     if isinstance(exc, (json.JSONDecodeError, ValueError)):
         return "DeepSeek 返回的日报内容不是有效 JSON", True
     if isinstance(exc, (TimeoutError, ConnectionError)) or exc.__class__.__name__ in {
@@ -36,6 +49,17 @@ def _error_details(exc: Exception) -> tuple[str, bool]:
     }:
         return "连接 DeepSeek API 超时或网络不可用", True
     return "DeepSeek API 请求失败", True
+
+
+def deepseek_error_summary(exc: Exception) -> str:
+    """Return log-safe failure metadata without including API response bodies."""
+    status_code = getattr(exc, "status_code", None)
+    error_type = getattr(exc, "error_type", exc.__class__.__name__)
+    message, _ = _error_details(exc)
+    if isinstance(exc, DeepSeekAPIError):
+        message = str(exc)
+    status = status_code if isinstance(status_code, int) else "unknown"
+    return f"type={error_type} http_status={status} message={message}"
 
 
 def _parse_response_content(response: Any) -> dict[str, Any]:
@@ -122,7 +146,11 @@ JSON 中 top10 每项必须包含：full_name、field、ai_category、growth_tre
         except Exception as exc:
             message, retryable = _error_details(exc)
             if not retryable or attempt >= cfg.ai_max_retries:
-                raise DeepSeekAPIError(message) from None
+                raise DeepSeekAPIError(
+                    message,
+                    status_code=getattr(exc, "status_code", None),
+                    error_type=exc.__class__.__name__,
+                ) from None
             delay = 2**attempt
             LOGGER.warning(
                 "%s；%d 秒后进行第 %d/%d 次重试",

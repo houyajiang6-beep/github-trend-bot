@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from ai_summary import DeepSeekAPIError, analyze_repositories
+from ai_summary import DeepSeekAPIError, analyze_repositories, deepseek_error_summary
 from config import Settings
 from crawler import Repository
 
@@ -119,6 +119,22 @@ class DeepSeekSummaryTests(unittest.TestCase):
             analyze_repositories(self.repositories, self.settings)
 
         self.assertEqual(create.call_count, 1)
+
+    @patch("openai.OpenAI")
+    def test_authentication_error_summary_does_not_include_response_body(
+        self, openai_class: Mock
+    ) -> None:
+        create = openai_class.return_value.chat.completions.create
+        secret_fragment = "must-not-appear"
+        create.side_effect = FakeHTTPError(401)
+        create.side_effect.args = (f"invalid key {secret_fragment}",)
+
+        with self.assertRaises(DeepSeekAPIError) as raised:
+            analyze_repositories(self.repositories, self.settings)
+
+        summary = deepseek_error_summary(raised.exception)
+        self.assertIn("http_status=401", summary)
+        self.assertNotIn(secret_fragment, summary)
 
     def test_missing_api_key_has_clear_message(self) -> None:
         settings = Settings(deepseek_api_key="")
