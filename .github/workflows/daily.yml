@@ -42,6 +42,14 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      - name: Restore previous report snapshots
+        uses: actions/cache/restore@v4
+        with:
+          path: reports
+          key: github-trend-reports-${{ github.run_id }}
+          restore-keys: |
+            github-trend-reports-
+
       - name: Install dependencies
         run: |
           set -Eeuo pipefail
@@ -131,8 +139,18 @@ jobs:
           github = status.get("github", {})
           deepseek = status.get("deepseek", {})
           gmail = status.get("gmail", {})
+          market_insight = status.get("market_insight", {})
+          social_content = status.get("social_content", {})
           html_generated = any(Path("reports").glob("*.html"))
           json_generated = any(Path("reports").glob("*.json"))
+          market_generated = bool(
+              market_insight.get("generated")
+              and any(Path("reports/market_insight").glob("*.json"))
+          )
+          content_generated = bool(
+              social_content.get("generated")
+              and any(Path("reports/content").glob("*.json"))
+          )
           github_success = bool(github.get("success"))
           deepseek_success = bool(deepseek.get("success"))
           gmail_success = bool(gmail.get("success"))
@@ -142,6 +160,8 @@ jobs:
                   deepseek_success,
                   html_generated,
                   json_generated,
+                  market_generated,
+                  content_generated,
                   gmail_success,
               )
           )
@@ -165,6 +185,12 @@ jobs:
               f"- HTML：{'已生成' if html_generated else '未生成'}",
               f"- JSON：{'已生成' if json_generated else '未生成'}",
               "",
+              "### v1.1 新增输出",
+              f"- Market Insight：{'已生成' if market_generated else '未生成'}",
+              f"- Content Generator：{'已生成' if content_generated else '未生成'}",
+              f"- Market Insight fallback：{'是' if market_insight.get('fallback', True) else '否'}",
+              f"- Content Generator fallback：{'是' if social_content.get('fallback', True) else '否'}",
+              "",
               "### Gmail",
               f"- 状态：{'成功' if gmail_success else '失败'}",
               "",
@@ -178,6 +204,13 @@ jobs:
           with summary_path.open("a", encoding="utf-8") as summary:
               summary.write("\n".join(lines) + "\n")
           PY
+
+      - name: Cache report snapshots for growth comparison
+        if: steps.run-bot.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: reports
+          key: github-trend-reports-${{ github.run_id }}
 
       - name: Print failure diagnostics
         if: failure()

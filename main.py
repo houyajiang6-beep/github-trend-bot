@@ -111,8 +111,8 @@ def run(dry_run: bool, skip_ai: bool) -> None:
             "fallback": True,
             "reason": "not_started",
         },
-        "market_insight": {"success": False, "fallback": True},
-        "social_content": {"success": False, "fallback": True},
+        "market_insight": {"success": False, "fallback": True, "generated": False},
+        "social_content": {"success": False, "fallback": True, "generated": False},
         "report": {"success": False},
         "gmail": {"success": False, "skipped": dry_run},
     }
@@ -152,7 +152,7 @@ def run(dry_run: bool, skip_ai: bool) -> None:
             market_insight = generate_market_insight(
                 repositories, analysis, growth_metrics, settings
             )
-            status["market_insight"] = {"success": True, "fallback": False}
+            status["market_insight"].update({"success": True, "fallback": False})
             LOGGER.info(
                 "DeepSeek 市场洞察成功：provider=%s model=%s http_status=2xx",
                 settings.ai_provider,
@@ -173,7 +173,7 @@ def run(dry_run: bool, skip_ai: bool) -> None:
             social_content = generate_content(
                 report_date, repositories, analysis, market_insight, settings
             )
-            status["social_content"] = {"success": True, "fallback": False}
+            status["social_content"].update({"success": True, "fallback": False})
             LOGGER.info(
                 "DeepSeek 社媒内容成功：provider=%s model=%s http_status=2xx",
                 settings.ai_provider,
@@ -187,7 +187,7 @@ def run(dry_run: bool, skip_ai: bool) -> None:
     _write_actions_status(status)
 
     plain_text, html_body = render_report(
-        report_date, repositories, analysis, market_insight
+        report_date, repositories, analysis, market_insight, social_content
     )
     settings.report_dir.mkdir(parents=True, exist_ok=True)
     html_path = settings.report_dir / f"{report_date}.html"
@@ -211,6 +211,22 @@ def run(dry_run: bool, skip_ai: bool) -> None:
     status["report"] = {"success": True}
     _write_actions_status(status)
 
+    market_dir = settings.report_dir / "market_insight"
+    try:
+        market_dir.mkdir(parents=True, exist_ok=True)
+        market_path = market_dir / f"{report_date}.json"
+        market_path.write_text(
+            json.dumps(market_insight, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        status["market_insight"].update(
+            {"generated": True, "output": str(market_path)}
+        )
+        LOGGER.info("市场洞察 JSON 已保存：%s", market_path)
+    except OSError as exc:
+        LOGGER.error("市场洞察 JSON 保存失败，继续日报发送：%s", exc)
+    _write_actions_status(status)
+
     content_dir = settings.report_dir / "content"
     try:
         content_dir.mkdir(parents=True, exist_ok=True)
@@ -219,10 +235,14 @@ def run(dry_run: bool, skip_ai: bool) -> None:
             json.dumps(social_content, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        status["social_content"].update(
+            {"generated": True, "output": str(content_path)}
+        )
         LOGGER.info("社媒内容 JSON 已保存：%s", content_path)
     except OSError as exc:
         # Auxiliary content must never block the established Gmail report flow.
         LOGGER.error("社媒内容 JSON 保存失败，继续日报发送：%s", exc)
+    _write_actions_status(status)
 
     if dry_run:
         LOGGER.info("dry-run 模式：不发送邮件")

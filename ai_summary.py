@@ -305,8 +305,10 @@ def _normalize_analysis(
 def render_report(
     report_date: str, repositories: list[Repository], analysis: dict[str, Any],
     market_insight: dict[str, list[str]] | None = None,
+    social_content: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     market_insight = market_insight or {}
+    social_content = social_content or {}
     repo_map = {repo.full_name: repo for repo in repositories}
     text_lines = ["《GitHub每日趋势日报》", "", f"日期：{report_date}", "", "今日最值得关注TOP10：", ""]
     cards = []
@@ -358,21 +360,63 @@ def render_report(
         ("affected_companies_industries", "可能影响的公司 / 行业"),
         ("long_term_watch", "长期关注方向"),
     )
-    insight_text: list[str] = []
     insight_html: list[str] = []
     if market_insight:
-        text_lines.extend(["", "---", "", "市场与技术洞察：", ""])
+        text_lines.extend(["", "---", "", "市场与商业洞察：", ""])
         for key, label in insight_labels:
             values = market_insight.get(key, [])
             text_lines.append(f"{label}：")
             text_lines.extend(f"- {value}" for value in values)
             text_lines.append("")
-            insight_text.extend(values)
             insight_html.append(
                 f"<h2>{html.escape(label)}</h2><ul>"
                 + "".join(f"<li>{html.escape(value)}</li>" for value in values)
                 + "</ul>"
             )
+
+    content_html: list[str] = []
+    if social_content:
+        text_lines.extend(["---", "", "内容创作建议：", ""])
+        titles = social_content.get("douyin_titles", [])
+        if isinstance(titles, list) and titles:
+            text_lines.append("抖音标题：")
+            text_lines.extend(f"- {title}" for title in titles)
+            text_lines.append("")
+            content_html.append(
+                "<h2>抖音标题</h2><ul>"
+                + "".join(f"<li>{html.escape(str(title))}</li>" for title in titles)
+                + "</ul>"
+            )
+        voiceover = social_content.get("voiceover_30s")
+        if isinstance(voiceover, str) and voiceover.strip():
+            text_lines.extend(["30 秒口播稿：", voiceover, ""])
+            content_html.append(
+                f"<h2>30 秒口播稿</h2><p>{html.escape(voiceover)}</p>"
+            )
+        note = social_content.get("xiaohongshu_note", {})
+        if isinstance(note, dict) and note:
+            note_title = str(note.get("title", "小红书笔记"))
+            note_body = str(note.get("body", ""))
+            text_lines.extend(["小红书笔记：", note_title, note_body, ""])
+            content_html.append(
+                f"<h2>小红书笔记</h2><p><b>{html.escape(note_title)}</b></p>"
+                f"<p>{html.escape(note_body).replace(chr(10), '<br>')}</p>"
+            )
+        video_topics = social_content.get("video_topics", [])
+        if isinstance(video_topics, list) and video_topics:
+            text_lines.append("视频选题：")
+            topic_items = []
+            for topic in video_topics:
+                if isinstance(topic, dict):
+                    title = str(topic.get("title", ""))
+                    angle = str(topic.get("angle", ""))
+                    label = f"{title}：{angle}" if angle else title
+                else:
+                    label = str(topic)
+                text_lines.append(f"- {label}")
+                topic_items.append(f"<li>{html.escape(label)}</li>")
+            text_lines.append("")
+            content_html.append("<h2>视频选题</h2><ul>" + "".join(topic_items) + "</ul>")
 
     html_body = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <style>body{{margin:0;background:#f5f7fb;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}}.wrap{{max-width:760px;margin:auto;padding:24px}}.hero{{background:#111827;color:#fff;padding:28px;border-radius:14px}}.hero h1{{margin:0 0 8px}}.card{{background:#fff;margin:16px 0;padding:20px;border-radius:12px;border:1px solid #e5e7eb}}.card h2{{margin-top:0}}.meta{{color:#6b7280}}a{{color:#2563eb}}.observe{{background:#ecfeff;border-left:4px solid #0891b2;padding:18px;border-radius:8px}}li{{margin:10px 0}}</style></head>
@@ -380,5 +424,6 @@ def render_report(
 <h1>今日最值得关注 TOP10</h1>{''.join(cards)}
 <h1>今日 AI 领域观察</h1><div class="observe">{html.escape(analysis['ai_observation'])}</div>
 <h1>值得收藏项目</h1><ul>{''.join(watch_items)}</ul>
-{('<h1>市场与技术洞察</h1>' + ''.join(insight_html)) if insight_html else ''}</div></body></html>"""
+{('<h1>市场与商业洞察</h1>' + ''.join(insight_html)) if insight_html else ''}
+{('<h1>内容创作建议</h1>' + ''.join(content_html)) if content_html else ''}</div></body></html>"""
     return "\n".join(text_lines), html_body
