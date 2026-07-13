@@ -1,9 +1,10 @@
 name: Daily GitHub Trend Report
 
 on:
-  # GitHub Actions cron uses UTC. 00:00 UTC = 08:00 Asia/Shanghai.
+  # GitHub Actions cron uses UTC. 00:07 UTC = 08:07 Asia/Shanghai.
+  # Avoid minute 0 because GitHub documents higher schedule load at each hour boundary.
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "7 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -141,6 +142,7 @@ jobs:
           gmail = status.get("gmail", {})
           market_insight = status.get("market_insight", {})
           social_content = status.get("social_content", {})
+          trigger_type = os.environ.get("GITHUB_EVENT_NAME", "unknown")
           html_generated = any(Path("reports").glob("*.html"))
           json_generated = any(Path("reports").glob("*.json"))
           market_generated = bool(
@@ -154,10 +156,9 @@ jobs:
           github_success = bool(github.get("success"))
           deepseek_success = bool(deepseek.get("success"))
           gmail_success = bool(gmail.get("success"))
-          overall_success = all(
+          required_success = all(
               (
                   github_success,
-                  deepseek_success,
                   html_generated,
                   json_generated,
                   market_generated,
@@ -165,6 +166,19 @@ jobs:
                   gmail_success,
               )
           )
+          any_fallback = any(
+              (
+                  deepseek.get("fallback", True),
+                  market_insight.get("fallback", True),
+                  social_content.get("fallback", True),
+              )
+          )
+          if not required_success:
+              final_status = "FAILED"
+          elif any_fallback or not deepseek_success:
+              final_status = "DEGRADED"
+          else:
+              final_status = "SUCCESS"
           run_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime(
               "%Y-%m-%d %H:%M:%S %Z"
           )
@@ -172,6 +186,7 @@ jobs:
               "## GitHub Trend Bot Report",
               "",
               f"运行时间：{run_time}",
+              f"触发类型：{trigger_type}",
               "",
               "### GitHub抓取",
               f"- 状态：{'成功' if github_success else '失败'}",
@@ -186,8 +201,10 @@ jobs:
               f"- JSON：{'已生成' if json_generated else '未生成'}",
               "",
               "### v1.1 新增输出",
-              f"- Market Insight：{'已生成' if market_generated else '未生成'}",
-              f"- Content Generator：{'已生成' if content_generated else '未生成'}",
+              f"- Market Insight 状态：{'成功' if market_insight.get('success') else '失败'}",
+              f"- Market Insight 输出：{'已生成' if market_generated else '未生成'}",
+              f"- Content Generator 状态：{'成功' if social_content.get('success') else '失败'}",
+              f"- Content Generator 输出：{'已生成' if content_generated else '未生成'}",
               f"- Market Insight fallback：{'是' if market_insight.get('fallback', True) else '否'}",
               f"- Content Generator fallback：{'是' if social_content.get('fallback', True) else '否'}",
               "",
@@ -195,7 +212,7 @@ jobs:
               f"- 状态：{'成功' if gmail_success else '失败'}",
               "",
               "### 整体状态",
-              f"**{'SUCCESS' if overall_success else 'FAILED'}**",
+              f"**{final_status}**",
           ]
           if deepseek.get("fallback", True):
               reason = deepseek.get("reason", "DeepSeek status unavailable")
