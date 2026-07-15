@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import daily_report_pipeline
 import main
 from config import Settings
 from crawler import Repository
@@ -34,11 +35,13 @@ class MainFallbackTests(unittest.TestCase):
                 deepseek_api_key="",
                 report_dir=report_dir,
                 log_dir=report_dir / "logs",
+                creator_output_dir=report_dir / "outputs",
+                enable_daily_content_pipeline=False,
             )
             with (
                 patch.object(main, "settings", settings),
                 patch.object(
-                    main.GitHubTrendingCrawler,
+                    daily_report_pipeline.GitHubTrendingCrawler,
                     "collect",
                     return_value=[make_repository()],
                 ),
@@ -84,15 +87,17 @@ class MainFallbackTests(unittest.TestCase):
             settings = Settings(
                 report_dir=report_dir,
                 log_dir=report_dir / "logs",
+                creator_output_dir=report_dir / "outputs",
+                enable_daily_content_pipeline=False,
             )
             with (
                 patch.object(main, "settings", settings),
                 patch.object(
-                    main.GitHubTrendingCrawler,
+                    daily_report_pipeline.GitHubTrendingCrawler,
                     "collect",
                     return_value=[make_repository()],
                 ),
-                patch.object(main, "send_email") as send_email,
+                patch.object(daily_report_pipeline, "send_email") as send_email,
             ):
                 main.run(dry_run=False, skip_ai=True)
 

@@ -1,0 +1,198 @@
+version: "0.1"
+platform: xiaohongshu
+audience: "18-30 岁、对 AI 感兴趣但不愿编程或复杂部署的学生和职场新人"
+
+score_scale:
+  min: 1
+  max: 5
+
+recommendation:
+  threshold: 65
+  minimum_normal_user_value: 3
+  minimum_usage_threshold: 2
+
+blend:
+  llm_weight: 0.7
+  rule_weight: 0.3
+  batch_size: 10
+  readme_max_chars: 2500
+
+dimensions:
+  normal_user_value:
+    weight: 22
+    question: "它是否解决普通人在学习、办公、求职、创作或生活中的明确问题？"
+    anchors:
+      1: "价值只对底层开发者或基础设施团队成立"
+      3: "普通人有价值，但需要特定身份或额外解释"
+      5: "普通人立刻理解收益，并能用于高频真实问题"
+
+  usage_threshold:
+    weight: 18
+    question: "非程序员是否容易开始使用？分数越高，门槛越低。"
+    anchors:
+      1: "必须写代码、编译源码或配置复杂环境"
+      3: "需要安装桌面软件或按教程完成少量配置"
+      5: "打开网页或应用即可使用，无需技术背景"
+
+  scenario_count:
+    weight: 12
+    question: "普通用户可用的具体场景是否丰富？"
+    anchors:
+      1: "没有明确普通用户场景"
+      3: "有 2 个清楚、可信的场景"
+      5: "有 4 个以上跨学习、办公、创作或生活的场景"
+
+  visual_value:
+    weight: 14
+    question: "能否通过录屏、前后对比或结果图在短视频中快速证明价值？"
+    anchors:
+      1: "只能讲概念、代码或后台指标"
+      3: "可以演示流程，但结果反差一般"
+      5: "3 秒内能展示明显结果或强烈前后对比"
+
+  viral_potential:
+    weight: 12
+    question: "是否具有反差、惊喜、讨论性或分享理由？"
+    anchors:
+      1: "高度专业且没有大众话题"
+      3: "实用但表达角度常见"
+      5: "结果反直觉、强痛点或容易引发讨论"
+
+  business_value:
+    weight: 10
+    question: "是否能连接用户付费意愿、工具库、课程或服务？"
+    anchors:
+      1: "没有清晰商业连接"
+      3: "可带来工具推荐或轻度购买意向"
+      5: "能直接连接高意向问题、服务或产品"
+
+  timeliness:
+    weight: 12
+    question: "项目是否处于值得现在讨论的时间窗口？"
+    anchors:
+      1: "缺少近期热度或已明显过时"
+      3: "当前仍有讨论价值，但不是新热点"
+      5: "近期快速增长、刚发布或正处在大众关注窗口"
+
+rule_signals:
+  ordinary_value:
+    - study
+    - learning
+    - notes
+    - document
+    - pdf
+    - office
+    - resume
+    - job
+    - writing
+    - image
+    - video
+    - design
+    - productivity
+    - personal
+    - privacy
+    - smart home
+    - transcription
+    - translate
+    - no-code
+
+  easy_access:
+    - web app
+    - browser
+    - desktop app
+    - windows
+    - macos
+    - mobile
+    - one-click
+    - no-code
+    - drag and drop
+    - installer
+
+  technical_barrier:
+    - cli
+    - command line
+    - sdk
+    - api gateway
+    - framework
+    - library
+    - compiler
+    - kubernetes
+    - docker compose
+    - build from source
+    - c++
+    - rust crate
+    - database engine
+
+  visual:
+    - image
+    - video
+    - dashboard
+    - ui
+    - screenshot
+    - diagram
+    - design
+    - animation
+    - before and after
+    - desktop
+    - browser
+
+  viral:
+    - ai
+    - automatic
+    - seconds
+    - one click
+    - private
+    - local
+    - free
+    - open source
+    - replace
+
+  business:
+    - team
+    - enterprise
+    - productivity
+    - office
+    - resume
+    - job
+    - creator
+    - marketing
+    - workflow
+    - automation
+
+scenario_groups:
+  study:
+    - study
+    - learning
+    - notes
+    - knowledge
+    - pdf
+  office:
+    - office
+    - document
+    - spreadsheet
+    - meeting
+    - productivity
+  career:
+    - resume
+    - job
+    - interview
+    - portfolio
+  creation:
+    - writing
+    - image
+    - video
+    - design
+    - creator
+  life:
+    - personal
+    - home
+    - health
+    - travel
+    - privacy
+
+output_language_rules:
+  - "先说普通用户获得的结果，再说项目名称"
+  - "不得把 Star、开源、框架或技术协议本身当作普通人价值"
+  - "避免 CLI、SDK、API、RAG、MCP 等术语；必须使用时用一句人话解释"
+  - "没有事实支持时写不确定，不得伪造亲测"
+  - "content_angle 必须包含具体人群、问题和可展示结果"

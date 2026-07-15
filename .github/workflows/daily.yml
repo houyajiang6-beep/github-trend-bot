@@ -25,6 +25,8 @@ jobs:
       TZ: Asia/Shanghai
       LOG_LEVEL: INFO
       REPORT_TIMEZONE: Asia/Shanghai
+      ENABLE_DAILY_CONTENT_PIPELINE: "true"
+      CREATOR_OUTPUT_DIR: outputs
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM }}
@@ -46,7 +48,9 @@ jobs:
       - name: Restore previous report snapshots
         uses: actions/cache/restore@v4
         with:
-          path: reports
+          path: |
+            reports
+            outputs/calibration
           key: github-trend-reports-${{ github.run_id }}
           restore-keys: |
             github-trend-reports-
@@ -100,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mkdir -p logs reports
+          mkdir -p logs reports outputs
 
           on_error() {
             status=$?
@@ -130,18 +134,27 @@ jobs:
           from zoneinfo import ZoneInfo
 
           status_path = Path("logs/actions-status.json")
+          execution_path = Path("logs/execution_status.json")
           summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
           status = {}
+          execution = {}
           if status_path.exists():
               status = json.loads(status_path.read_text(encoding="utf-8"))
           else:
               print("::error title=Run status unavailable::logs/actions-status.json was not generated")
+          if execution_path.exists():
+              execution = json.loads(execution_path.read_text(encoding="utf-8"))
+          else:
+              print("::error title=Execution status unavailable::logs/execution_status.json was not generated")
 
           github = status.get("github", {})
           deepseek = status.get("deepseek", {})
           gmail = status.get("gmail", {})
           market_insight = status.get("market_insight", {})
           social_content = status.get("social_content", {})
+          creator_pipeline = execution.get("creator_pipeline", {})
+          creator_status = creator_pipeline.get("status", "failed")
+          selected_project = creator_pipeline.get("selected_project") or "未选出"
           trigger_type = os.environ.get("GITHUB_EVENT_NAME", "unknown")
           html_generated = any(Path("reports").glob("*.html"))
           json_generated = any(Path("reports").glob("*.json"))
@@ -175,7 +188,11 @@ jobs:
           )
           if not required_success:
               final_status = "FAILED"
-          elif any_fallback or not deepseek_success:
+          elif (
+              any_fallback
+              or not deepseek_success
+              or creator_status in {"failed", "degraded"}
+          ):
               final_status = "DEGRADED"
           else:
               final_status = "SUCCESS"
@@ -208,6 +225,11 @@ jobs:
               f"- Market Insight fallback：{'是' if market_insight.get('fallback', True) else '否'}",
               f"- Content Generator fallback：{'是' if social_content.get('fallback', True) else '否'}",
               "",
+              "### Creator Pipeline",
+              f"- 状态：{creator_status}",
+              f"- 今日首选项目：{selected_project}",
+              f"- Creator Ready 输出：{creator_pipeline.get('output') or '未生成'}",
+              "",
               "### Gmail",
               f"- 状态：{'成功' if gmail_success else '失败'}",
               "",
@@ -226,7 +248,9 @@ jobs:
         if: steps.run-bot.outcome == 'success'
         uses: actions/cache/save@v4
         with:
-          path: reports
+          path: |
+            reports
+            outputs/calibration
           key: github-trend-reports-${{ github.run_id }}
 
       - name: Print failure diagnostics
@@ -250,6 +274,7 @@ jobs:
           path: |
             logs/
             reports/
+            outputs/
           if-no-files-found: warn
           retention-days: 14
 

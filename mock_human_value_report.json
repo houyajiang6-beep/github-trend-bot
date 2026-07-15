@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-07-12T18:13:02+08:00",
+  "rules_version": "0.1",
+  "mode": "llm_and_rules",
+  "projects": [
+    {
+      "project_name": "mock/private-doc-chat",
+      "human_value_score": 84.4,
+      "scores": {"normal_user_value": 5, "usage_threshold": 4, "scenario_count": 4, "visual_value": 4, "viral_potential": 4, "business_value": 4, "timeliness": 4},
+      "target_user": "需要从 PDF 和个人资料中快速找答案的学生和职场新人",
+      "why_people_care": "文件留在电脑本地，也能像聊天一样查询资料",
+      "content_angle": "备考或写报告时，不用逐页翻资料，直接提问并定位原文",
+      "recommended_or_not": true
+    },
+    {
+      "project_name": "mock/one-click-image-cleaner",
+      "human_value_score": 86.4,
+      "scores": {"normal_user_value": 4, "usage_threshold": 5, "scenario_count": 3, "visual_value": 5, "viral_potential": 5, "business_value": 4, "timeliness": 4},
+      "target_user": "需要处理封面、商品图和社媒图片的普通创作者",
+      "why_people_care": "不学专业修图软件，也能清理照片背景和杂物",
+      "content_angle": "用真实照片展示处理前后差异，并说明哪些复杂图片效果有限",
+      "recommended_or_not": true
+    },
+    {
+      "project_name": "mock/resume-tailor",
+      "human_value_score": 88.0,
+      "scores": {"normal_user_value": 5, "usage_threshold": 5, "scenario_count": 3, "visual_value": 4, "viral_potential": 4, "business_value": 4, "timeliness": 5},
+      "target_user": "正在投简历的学生、应届生和转行者",
+      "why_people_care": "可以对照岗位要求发现简历遗漏，但仍需要本人核对真实性",
+      "content_angle": "同一份简历如何针对不同岗位调整重点，而不是让 AI 编造经历",
+      "recommended_or_not": true
+    },
+    {
+      "project_name": "mock/local-meeting-transcriber",
+      "human_value_score": 69.6,
+      "scores": {"normal_user_value": 4, "usage_threshold": 3, "scenario_count": 3, "visual_value": 4, "viral_potential": 3, "business_value": 3, "timeliness": 4},
+      "target_user": "经常上课、开会并需要整理笔记的人",
+      "why_people_care": "录音可以在本地转成文字和待办，减少重复整理",
+      "content_angle": "用一段真实录音测试转写和总结，并展示错字与使用限制",
+      "recommended_or_not": true
+    },
+    {
+      "project_name": "mock/portfolio-page-maker",
+      "human_value_score": 87.6,
+      "scores": {"normal_user_value": 5, "usage_threshold": 5, "scenario_count": 4, "visual_value": 4, "viral_potential": 3, "business_value": 5, "timeliness": 4},
+      "target_user": "准备求职、接单或展示作品的学生和自由职业者",
+      "why_people_care": "不用写代码也能整理并发布自己的作品页面",
+      "content_angle": "21 岁学生从空白开始整理作品集，展示完成过程和实际时间成本",
+      "recommended_or_not": true
+    },
+    {
+      "project_name": "mock/home-energy-dashboard",
+      "human_value_score": 56.8,
+      "scores": {"normal_user_value": 3, "usage_threshold": 2, "scenario_count": 2, "visual_value": 4, "viral_potential": 3, "business_value": 3, "timeliness": 3},
+      "target_user": "想了解家庭用电情况的人",
+      "why_people_care": "图表能帮助观察电费去向，但需要额外硬件和安装能力",
+      "content_angle": "为什么看起来实用，却不适合大多数人马上跟着安装",
+      "recommended_or_not": false
+    },
+    {
+      "project_name": "mock/claude-terminal-agent",
+      "human_value_score": 32.4,
+      "scores": {"normal_user_value": 1, "usage_threshold": 1, "scenario_count": 1, "visual_value": 2, "viral_potential": 2, "business_value": 1, "timeliness": 4},
+      "target_user": "软件开发者",
+      "why_people_care": "普通用户无法直接使用",
+      "content_angle": "热门不等于普通人值得收藏",
+      "recommended_or_not": false
+    },
+    {
+      "project_name": "mock/cpp-fast-test",
+      "human_value_score": 22.4,
+      "scores": {"normal_user_value": 1, "usage_threshold": 1, "scenario_count": 1, "visual_value": 1, "viral_potential": 1, "business_value": 1, "timeliness": 2},
+      "target_user": "C++ 开发者",
+      "why_people_care": "只用于软件测试",
+      "content_angle": "技术项目不等于大众内容选题",
+      "recommended_or_not": false
+    },
+    {
+      "project_name": "mock/cloud-api-gateway",
+      "human_value_score": 24.4,
+      "scores": {"normal_user_value": 1, "usage_threshold": 1, "scenario_count": 1, "visual_value": 1, "viral_potential": 1, "business_value": 2, "timeliness": 2},
+      "target_user": "云平台工程团队",
+      "why_people_care": "普通用户没有直接使用场景",
+      "content_angle": "开发者热度与普通用户价值的区别",
+      "recommended_or_not": false
+    },
+    {
+      "project_name": "mock/rust-database-engine",
+      "human_value_score": 25.2,
+      "scores": {"normal_user_value": 1, "usage_threshold": 1, "scenario_count": 1, "visual_value": 2, "viral_potential": 1, "business_value": 1, "timeliness": 2},
+      "target_user": "数据库工程师",
+      "why_people_care": "需要编译和专业配置，普通用户无法直接受益",
+      "content_angle": "项目很新，但不应该包装成普通人的 AI 工具",
+      "recommended_or_not": false
+    }
+  ]
+}

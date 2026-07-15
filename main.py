@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import logging.handlers
 import os
@@ -12,34 +11,12 @@ from pathlib import Path
 from typing import Iterator
 from zoneinfo import ZoneInfo
 
-from ai_summary import (
-    analyze_repositories,
-    deepseek_error_summary,
-    fallback_analysis,
-    render_report,
-)
 from config import settings
-from content_generator import fallback_content, generate_content
-from crawler import GitHubTrendingCrawler
 from email_sender import send_email
-from market_insight import (
-    build_growth_metrics,
-    fallback_market_insight,
-    generate_market_insight,
-    load_previous_stars,
-)
+from runner import run_daily_pipelines
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-def _write_actions_status(status: dict) -> None:
-    """Persist a secret-free machine-readable status for GitHub Actions."""
-    settings.log_dir.mkdir(parents=True, exist_ok=True)
-    (settings.log_dir / "actions-status.json").write_text(
-        json.dumps(status, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
 
 
 def setup_logging() -> None:
@@ -75,7 +52,7 @@ def single_instance(lock_file: Path) -> Iterator[None]:
 
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
-                handle.write("\0")
+                handle.write("\\0")
                 handle.flush()
             handle.seek(0)
             try:
@@ -98,160 +75,9 @@ def single_instance(lock_file: Path) -> Iterator[None]:
         handle.close()
 
 
-def run(dry_run: bool, skip_ai: bool) -> None:
-    now = datetime.now(ZoneInfo(settings.report_timezone))
-    report_date = now.date().isoformat()
-    LOGGER.info("开始生成 %s GitHub 趋势日报", report_date)
-    status = {
-        "github": {"success": False, "repositories": 0},
-        "deepseek": {
-            "success": False,
-            "provider": settings.ai_provider,
-            "model": settings.deepseek_model,
-            "fallback": True,
-            "reason": "not_started",
-        },
-        "market_insight": {"success": False, "fallback": True, "generated": False},
-        "social_content": {"success": False, "fallback": True, "generated": False},
-        "report": {"success": False},
-        "gmail": {"success": False, "skipped": dry_run},
-    }
-    _write_actions_status(status)
-
-    repositories = GitHubTrendingCrawler(settings).collect()
-    status["github"] = {"success": True, "repositories": len(repositories)}
-    _write_actions_status(status)
-    previous_stars, elapsed_days = load_previous_stars(settings.report_dir, report_date)
-    growth_metrics = build_growth_metrics(repositories, previous_stars, elapsed_days)
-
-    if skip_ai:
-        LOGGER.warning("已通过 --skip-ai 跳过 DeepSeek 分析")
-        analysis = fallback_analysis(repositories, growth_metrics)
-        status["deepseek"]["reason"] = "skip_ai"
-    else:
-        try:
-            analysis = analyze_repositories(repositories, settings, growth_metrics)
-            status["deepseek"].update(
-                {"success": True, "fallback": False, "reason": ""}
-            )
-            LOGGER.info(
-                "DeepSeek 调用成功：provider=%s model=%s http_status=2xx",
-                settings.ai_provider,
-                settings.deepseek_model,
-            )
-        except Exception as exc:
-            reason = deepseek_error_summary(exc)
-            status["deepseek"]["reason"] = reason
-            LOGGER.error("DeepSeek 分析失败，降级为数据摘要：%s", reason)
-            analysis = fallback_analysis(repositories, growth_metrics)
-    _write_actions_status(status)
-
-    market_insight = fallback_market_insight(repositories, growth_metrics)
-    if not skip_ai:
-        try:
-            market_insight = generate_market_insight(
-                repositories, analysis, growth_metrics, settings
-            )
-            status["market_insight"].update({"success": True, "fallback": False})
-            LOGGER.info(
-                "DeepSeek 市场洞察成功：provider=%s model=%s http_status=2xx",
-                settings.ai_provider,
-                settings.deepseek_model,
-            )
-        except Exception as exc:
-            LOGGER.error(
-                "市场洞察生成失败，使用规则降级内容：%s",
-                deepseek_error_summary(exc),
-            )
-    _write_actions_status(status)
-
-    social_content = fallback_content(
-        report_date, repositories, analysis, market_insight
-    )
-    if not skip_ai:
-        try:
-            social_content = generate_content(
-                report_date, repositories, analysis, market_insight, settings
-            )
-            status["social_content"].update({"success": True, "fallback": False})
-            LOGGER.info(
-                "DeepSeek 社媒内容成功：provider=%s model=%s http_status=2xx",
-                settings.ai_provider,
-                settings.deepseek_model,
-            )
-        except Exception as exc:
-            LOGGER.error(
-                "社媒内容生成失败，使用规则降级内容：%s",
-                deepseek_error_summary(exc),
-            )
-    _write_actions_status(status)
-
-    plain_text, html_body = render_report(
-        report_date, repositories, analysis, market_insight, social_content
-    )
-    settings.report_dir.mkdir(parents=True, exist_ok=True)
-    html_path = settings.report_dir / f"{report_date}.html"
-    json_path = settings.report_dir / f"{report_date}.json"
-    html_path.write_text(html_body, encoding="utf-8")
-    json_path.write_text(
-        json.dumps(
-            {
-                "date": report_date,
-                "repositories": [repo.to_dict() for repo in repositories],
-                "growth_metrics": growth_metrics,
-                "analysis": analysis,
-                "market_insight": market_insight,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    LOGGER.info("报告已保存：%s", html_path)
-    status["report"] = {"success": True}
-    _write_actions_status(status)
-
-    market_dir = settings.report_dir / "market_insight"
-    try:
-        market_dir.mkdir(parents=True, exist_ok=True)
-        market_path = market_dir / f"{report_date}.json"
-        market_path.write_text(
-            json.dumps(market_insight, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        status["market_insight"].update(
-            {"generated": True, "output": str(market_path)}
-        )
-        LOGGER.info("市场洞察 JSON 已保存：%s", market_path)
-    except OSError as exc:
-        LOGGER.error("市场洞察 JSON 保存失败，继续日报发送：%s", exc)
-    _write_actions_status(status)
-
-    content_dir = settings.report_dir / "content"
-    try:
-        content_dir.mkdir(parents=True, exist_ok=True)
-        content_path = content_dir / f"{report_date}.json"
-        content_path.write_text(
-            json.dumps(social_content, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        status["social_content"].update(
-            {"generated": True, "output": str(content_path)}
-        )
-        LOGGER.info("社媒内容 JSON 已保存：%s", content_path)
-    except OSError as exc:
-        # Auxiliary content must never block the established Gmail report flow.
-        LOGGER.error("社媒内容 JSON 保存失败，继续日报发送：%s", exc)
-    _write_actions_status(status)
-
-    if dry_run:
-        LOGGER.info("dry-run 模式：不发送邮件")
-        _write_actions_status(status)
-        return
-    subject = f"【GitHub趋势日报】{report_date}"
-    send_email(subject, plain_text, html_body, settings)
-    status["gmail"] = {"success": True, "skipped": False}
-    _write_actions_status(status)
+def run(dry_run: bool, skip_ai: bool) -> dict:
+    """Keep the historical main.run API while delegating orchestration."""
+    return run_daily_pipelines(dry_run=dry_run, skip_ai=skip_ai, cfg=settings)
 
 
 def send_test_email() -> None:
@@ -267,7 +93,7 @@ def send_test_email() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="GitHub 每日趋势日报")
-    parser.add_argument("--dry-run", action="store_true", help="生成报告但不发邮件")
+    parser.add_argument("--dry-run", action="store_true", help="生成报告但不发送邮件")
     parser.add_argument("--skip-ai", action="store_true", help="跳过 DeepSeek，仅测试采集")
     parser.add_argument("--test-email", action="store_true", help="只发送 Gmail 配置测试邮件")
     return parser.parse_args()

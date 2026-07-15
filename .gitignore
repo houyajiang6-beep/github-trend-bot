@@ -10,3 +10,5 @@ logs/*
 !logs/.gitkeep
 reports/*
 !reports/.gitkeep
+outputs/*
+!outputs/.gitkeep

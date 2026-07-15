@@ -1,0 +1,115 @@
+{
+  "date": "2026-07-12",
+  "repositories": [
+    {
+      "rank": 1,
+      "full_name": "mock/private-doc-chat",
+      "url": "https://github.com/mock/private-doc-chat",
+      "stars": 28400,
+      "stars_today": 920,
+      "language": "TypeScript",
+      "description": "A local desktop app that lets users chat with PDFs and personal documents without uploading files.",
+      "readme": "Desktop app for Windows and macOS. Drag and drop PDFs, notes and office documents, then ask questions. Local processing keeps private files on the computer. Includes an installer and visual citations.",
+      "topics": ["ai", "pdf", "privacy", "desktop-app", "knowledge-base"]
+    },
+    {
+      "rank": 2,
+      "full_name": "mock/one-click-image-cleaner",
+      "url": "https://github.com/mock/one-click-image-cleaner",
+      "stars": 12100,
+      "stars_today": 610,
+      "language": "Python",
+      "description": "Browser-based AI image editor for removing backgrounds and unwanted objects in seconds.",
+      "readme": "Upload an image in the web app, brush over an object, and download the cleaned result. Includes before and after preview. No command line is required for the hosted demo.",
+      "topics": ["ai", "image", "creator", "web-app", "design"]
+    },
+    {
+      "rank": 3,
+      "full_name": "mock/resume-tailor",
+      "url": "https://github.com/mock/resume-tailor",
+      "stars": 8600,
+      "stars_today": 340,
+      "language": "JavaScript",
+      "description": "A web app that compares a resume with a job description and suggests targeted improvements.",
+      "readme": "Paste a job description and upload a resume. The dashboard highlights missing skills, rewrites bullet points and exports a revised document. Designed for students and job seekers.",
+      "topics": ["ai", "resume", "job", "career", "web-app"]
+    },
+    {
+      "rank": 4,
+      "full_name": "mock/local-meeting-transcriber",
+      "url": "https://github.com/mock/local-meeting-transcriber",
+      "stars": 19700,
+      "stars_today": 280,
+      "language": "Python",
+      "description": "Private desktop meeting transcription and summary tool that runs locally.",
+      "readme": "Record or import meeting audio, generate a transcript and action list, and export notes. Desktop installer is available. Processing is local, but downloading the speech model takes several minutes.",
+      "topics": ["ai", "meeting", "transcription", "privacy", "desktop"]
+    },
+    {
+      "rank": 5,
+      "full_name": "mock/home-energy-dashboard",
+      "url": "https://github.com/mock/home-energy-dashboard",
+      "stars": 6300,
+      "stars_today": 95,
+      "language": "TypeScript",
+      "description": "A visual dashboard that helps households understand electricity use and find waste.",
+      "readme": "Connect supported smart plugs to see room-by-room energy charts, cost estimates and automatic alerts. Requires compatible hardware and Docker Compose for self-hosting.",
+      "topics": ["smart-home", "dashboard", "energy", "personal", "docker-compose"]
+    },
+    {
+      "rank": 6,
+      "full_name": "mock/claude-terminal-agent",
+      "url": "https://github.com/mock/claude-terminal-agent",
+      "stars": 31500,
+      "stars_today": 780,
+      "language": "Python",
+      "description": "CLI agent framework that lets developers automate terminal and coding workflows.",
+      "readme": "Install with pip, configure API keys and YAML, then run agents from the command line. Supports plugins, shell execution, Git worktrees and custom developer tools.",
+      "topics": ["ai", "agent", "cli", "developer-tool", "automation"]
+    },
+    {
+      "rank": 7,
+      "full_name": "mock/cpp-fast-test",
+      "url": "https://github.com/mock/cpp-fast-test",
+      "stars": 22100,
+      "stars_today": 130,
+      "language": "C++",
+      "description": "A C++ unit testing and benchmarking framework for software developers.",
+      "readme": "Add the library with CMake, write test macros, compile the project and run benchmarks. Supports C++17 and advanced test fixtures.",
+      "topics": ["c++", "library", "testing", "benchmark", "framework"]
+    },
+    {
+      "rank": 8,
+      "full_name": "mock/cloud-api-gateway",
+      "url": "https://github.com/mock/cloud-api-gateway",
+      "stars": 15400,
+      "stars_today": 210,
+      "language": "Go",
+      "description": "A high-performance API gateway for Kubernetes and enterprise cloud services.",
+      "readme": "Deploy to Kubernetes using Helm. Configure routing, authentication, observability and rate limits through YAML or the admin API. Intended for platform engineering teams.",
+      "topics": ["api-gateway", "kubernetes", "cloud", "enterprise", "developer-tool"]
+    },
+    {
+      "rank": 9,
+      "full_name": "mock/portfolio-page-maker",
+      "url": "https://github.com/mock/portfolio-page-maker",
+      "stars": 4800,
+      "stars_today": 170,
+      "language": "TypeScript",
+      "description": "No-code portfolio website builder for students, creators and job seekers.",
+      "readme": "Choose a template, drag and drop projects, import resume details and publish a mobile-friendly page. A hosted web app and visual editor are available.",
+      "topics": ["no-code", "portfolio", "job", "creator", "web-app", "design"]
+    },
+    {
+      "rank": 10,
+      "full_name": "mock/rust-database-engine",
+      "url": "https://github.com/mock/rust-database-engine",
+      "stars": 7200,
+      "stars_today": 520,
+      "language": "Rust",
+      "description": "An experimental database engine written in Rust with a new storage architecture.",
+      "readme": "Build from source with the Rust toolchain. Run compatibility tests and configure the database server from the command line. The project is experimental and intended for database engineers.",
+      "topics": ["rust", "database-engine", "compiler", "developer-tool", "experimental"]
+    }
+  ]
+}

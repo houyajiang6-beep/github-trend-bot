@@ -32,6 +32,13 @@ def _bool_env(name: str, default: bool) -> bool:
     raise ValueError(f"{name} 必须是 true 或 false")
 
 
+def _daily_pipeline_enabled() -> bool:
+    """Use the unified flag while honoring the old migration flag."""
+    if "ENABLE_DAILY_CONTENT_PIPELINE" in os.environ:
+        return _bool_env("ENABLE_DAILY_CONTENT_PIPELINE", True)
+    return _bool_env("ENABLE_HUMAN_VALUE_AGENT", True)
+
+
 @dataclass(frozen=True)
 class Settings:
     ai_provider: str = os.getenv("AI_PROVIDER", "deepseek").strip().lower()
@@ -45,6 +52,7 @@ class Settings:
     deepseek_thinking: bool = _bool_env("DEEPSEEK_THINKING", False)
     ai_request_timeout: int = _int_env("AI_REQUEST_TIMEOUT", 120)
     ai_max_retries: int = _int_env("AI_MAX_RETRIES", 3)
+    enable_daily_content_pipeline: bool = _daily_pipeline_enabled()
     github_token: str = os.getenv("GITHUB_TOKEN", "").strip()
     email_from: str = os.getenv("EMAIL_FROM", "").strip()
     email_to: str = os.getenv("EMAIL_TO", "").strip()
@@ -59,6 +67,7 @@ class Settings:
     report_timezone: str = os.getenv("REPORT_TIMEZONE", "Asia/Shanghai")
     log_dir: Path = _path_from_env("LOG_DIR", "logs")
     report_dir: Path = _path_from_env("REPORT_DIR", "reports")
+    creator_output_dir: Path = _path_from_env("CREATOR_OUTPUT_DIR", "outputs")
 
     def validate_collection(self) -> None:
         if not 10 <= self.trending_limit <= 50:
