@@ -62,8 +62,10 @@ class ContentGeneratorMVPTests(unittest.TestCase):
                     "human_value_score",
                     "content_types",
                     "generated_time",
+                    "generation_mode",
                 },
             )
+            self.assertEqual(metadata["generation_mode"], "rules_fallback")
             datetime.fromisoformat(metadata["generated_time"])
 
     def test_generated_copy_has_persona_and_avoids_developer_jargon(self) -> None:
@@ -130,6 +132,12 @@ class ContentGeneratorMVPTests(unittest.TestCase):
         ).generate(self.report)
 
         self.assertEqual(package["mode"], "llm_and_templates")
+        self.assertTrue(
+            all(
+                item["generation_mode"] == "full_llm"
+                for item in package["content_metadata"]
+            )
+        )
         post = package["xiaohongshu_posts"][0]
         video = package["video_scripts"][0]
         self.assertNotIn("GitHub", post["title"])
@@ -195,6 +203,12 @@ class ContentGeneratorMVPTests(unittest.TestCase):
 
         self.assertEqual(package["mode"], "templates_fallback")
         self.assertTrue(package["llm_failed"])
+        self.assertTrue(
+            all(
+                item["generation_mode"] == "rules_fallback"
+                for item in package["content_metadata"]
+            )
+        )
         self.assertEqual(len(package["xiaohongshu_posts"]), 5)
         self.assertEqual(len(package["video_scripts"]), 5)
 

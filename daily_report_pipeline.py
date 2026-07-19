@@ -14,6 +14,11 @@ from ai_summary import (
 )
 from config import Settings
 from content_generator import fallback_content, generate_content
+from creator_delivery import (
+    append_creator_delivery,
+    create_creator_ready_zip,
+    load_creator_delivery,
+)
 from crawler import GitHubTrendingCrawler, Repository
 from email_sender import send_email
 from market_insight import (
@@ -172,6 +177,7 @@ def finalize_daily_report(
     social_success: bool,
     social_fallback: bool,
     dry_run: bool,
+    creator_status: dict[str, Any],
 ) -> dict[str, Any]:
     """Write the legacy report artifacts and keep Gmail behavior unchanged."""
     cfg = context.cfg
@@ -188,6 +194,10 @@ def finalize_daily_report(
         context.analysis,
         context.market_insight,
         social_content,
+    )
+    delivery = load_creator_delivery(creator_status, report_date)
+    plain_text, html_body = append_creator_delivery(
+        plain_text, html_body, delivery
     )
     cfg.report_dir.mkdir(parents=True, exist_ok=True)
     html_path = cfg.report_dir / f"{report_date}.html"
@@ -210,6 +220,25 @@ def finalize_daily_report(
     LOGGER.info("报告已保存：%s", html_path)
     status["report"] = {"success": True}
     _write_actions_status(cfg, status)
+
+    archive_path: Path | None = None
+    if delivery["available"]:
+        try:
+            archive_path = create_creator_ready_zip(
+                Path(str(delivery["output_directory"])),
+                cfg.report_dir,
+                delivery["generation_date"],
+            )
+            creator_status["attachment"] = str(archive_path)
+            creator_status["attachment_status"] = "ready"
+        except (OSError, ValueError) as exc:
+            creator_status["attachment"] = None
+            creator_status["attachment_status"] = "failed"
+            creator_status["attachment_error"] = str(exc)
+            LOGGER.error("Creator Ready ZIP 生成失败，继续发送正文：%s", exc)
+    else:
+        creator_status["attachment"] = None
+        creator_status["attachment_status"] = "not_available"
 
     market_dir = cfg.report_dir / "market_insight"
     try:
@@ -251,7 +280,13 @@ def finalize_daily_report(
         return status
 
     subject = f"【GitHub趋势日报】{report_date}"
-    send_email(subject, plain_text, html_body, cfg)
+    send_email(
+        subject,
+        plain_text,
+        html_body,
+        cfg,
+        attachments=[archive_path] if archive_path else None,
+    )
     status["gmail"] = {"success": True, "skipped": False}
     _write_actions_status(cfg, status)
     return status

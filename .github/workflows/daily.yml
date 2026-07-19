@@ -267,6 +267,7 @@ jobs:
           done
 
       - name: Upload logs and generated reports
+        id: upload-artifact
         if: always()
         uses: actions/upload-artifact@v6
         with:
@@ -274,9 +275,55 @@ jobs:
           path: |
             logs/
             reports/
-            outputs/
+            outputs/creator_ready/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Publish Creator delivery summary
+        if: always()
+        shell: bash
+        env:
+          ARTIFACT_OUTCOME: ${{ steps.upload-artifact.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          execution_path = Path("logs/execution_status.json")
+          creator = {}
+          if execution_path.is_file():
+              execution = json.loads(execution_path.read_text(encoding="utf-8"))
+              creator = execution.get("creator_pipeline", {})
+          status = str(creator.get("status") or "failed").upper()
+          mode = str(creator.get("content_generation_mode") or "unknown")
+          fallback_projects = creator.get("fallback_projects") or []
+          fallback = mode in {"partial_fallback", "rules_fallback"}
+          creator_files_exist = any(Path("outputs/creator_ready").glob("*/*"))
+          artifact_uploaded = (
+              os.environ.get("ARTIFACT_OUTCOME") == "success"
+              and creator_files_exist
+          )
+          lines = [
+              "",
+              "## Creator Delivery",
+              "",
+              f"- Creator Pipeline：{status}",
+              f"- 生成日期：{creator.get('publish_date') or '未知'}",
+              f"- 今日首选：{creator.get('selected_project') or '未选出'}",
+              f"- 候选数量：{creator.get('candidate_count', 0)}",
+              f"- Artifact 已上传：{'是' if artifact_uploaded else '否'}",
+              f"- Content Generator fallback：{'是' if fallback else '否'}",
+              f"- Content Generator 模式：{mode}",
+              "- fallback 项目：" + ("、".join(fallback_projects) if fallback_projects else "无"),
+          ]
+          reason = creator.get("degraded_reason") or creator.get("reason_code")
+          if status in {"DEGRADED", "FAILED"}:
+              lines.append(f"- 原因：{reason or '未提供'}")
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary_path.open("a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines) + "\n")
+          PY
 
       - name: Remove temporary Gmail credentials
         if: always()
