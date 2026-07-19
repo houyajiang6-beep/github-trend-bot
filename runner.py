@@ -71,6 +71,11 @@ def _run_creator_pipeline(
             "status": "degraded",
             "selected_project": None,
             "reason_code": "USER_DISABLED_LEGACY_REPORT_ONLY",
+            "degraded_reason": "Creator Pipeline 已通过配置禁用",
+            "publish_date": context.report_date,
+            "candidate_count": 0,
+            "content_generation_mode": "unknown",
+            "fallback_projects": [],
             "output": None,
             "error": None,
         }
@@ -92,12 +97,19 @@ def _run_creator_pipeline(
             result["selected_project"],
             result["creator_ready_directory"],
         )
+        degraded_reason = "；".join(result.get("degraded_reasons") or []) or None
         return social_content, True, pipeline_status == "degraded", {
             "status": pipeline_status,
             "selected_project": result["selected_project"],
+            "selected_title": result["selected_title"],
+            "publish_date": result["publish_date"],
+            "candidate_count": result["top_n"],
+            "content_generation_mode": result.get("content_generation_mode"),
+            "fallback_projects": result.get("fallback_projects") or [],
             "reason_code": (
                 "PIPELINE_FALLBACK_USED" if pipeline_status == "degraded" else None
             ),
+            "degraded_reason": degraded_reason,
             "output": result["creator_ready_directory"],
             "error": None,
         }
@@ -109,6 +121,11 @@ def _run_creator_pipeline(
             "status": "failed",
             "selected_project": None,
             "reason_code": "CREATOR_PIPELINE_FAILED",
+            "degraded_reason": str(exc),
+            "publish_date": context.report_date,
+            "candidate_count": 0,
+            "content_generation_mode": "unknown",
+            "fallback_projects": [],
             "output": None,
             "error": {"type": exc.__class__.__name__, "message": str(exc)},
         }
@@ -136,6 +153,7 @@ def run_daily_pipelines(
             social_success=social_success,
             social_fallback=social_fallback,
             dry_run=dry_run,
+            creator_status=creator_status,
         )
         execution_status["daily_report"] = {
             "status": "success",

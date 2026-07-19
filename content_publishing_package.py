@@ -582,6 +582,9 @@ def build_creator_ready_packages(
                     "human_value_score": metadata[project].get("human_value_score"),
                     "creator_strategy_score": strategy["creator_strategy_score"],
                     "strategy_decision": strategy["decision"],
+                    "generation_mode": metadata[project].get(
+                        "generation_mode", "unknown"
+                    ),
                     "files": list(CREATOR_READY_FILES),
                 }
             )

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import base64
 import logging
+import mimetypes
 import os
 from email.message import EmailMessage
+from pathlib import Path
+from typing import Sequence
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -30,7 +33,14 @@ def _credentials(cfg: Settings) -> Credentials:
     return creds
 
 
-def send_email(subject: str, plain_text: str, html_body: str, cfg: Settings) -> str:
+def send_email(
+    subject: str,
+    plain_text: str,
+    html_body: str,
+    cfg: Settings,
+    *,
+    attachments: Sequence[Path] | None = None,
+) -> str:
     cfg.validate_email()
     message = EmailMessage()
     message["To"] = cfg.email_to
@@ -38,6 +48,19 @@ def send_email(subject: str, plain_text: str, html_body: str, cfg: Settings) -> 
     message["Subject"] = subject
     message.set_content(plain_text)
     message.add_alternative(html_body, subtype="html")
+    for attachment in attachments or []:
+        mime_type, _ = mimetypes.guess_type(attachment.name)
+        maintype, subtype = (
+            mime_type.split("/", 1)
+            if mime_type and "/" in mime_type
+            else ("application", "octet-stream")
+        )
+        message.add_attachment(
+            attachment.read_bytes(),
+            maintype=maintype,
+            subtype=subtype,
+            filename=attachment.name,
+        )
     encoded = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
     service = build("gmail", "v1", credentials=_credentials(cfg), cache_discovery=False)
@@ -45,4 +68,3 @@ def send_email(subject: str, plain_text: str, html_body: str, cfg: Settings) -> 
     message_id = str(result.get("id", ""))
     LOGGER.info("邮件发送成功，Gmail message id=%s", message_id)
     return message_id
-

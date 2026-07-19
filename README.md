@@ -192,6 +192,23 @@ ls -lh /opt/github-trend-bot/reports/
 
 应用日志按 10 MB 轮转并保留 14 个备份。`cron.log` 可再用系统 `logrotate` 管理。
 
+## Creator Ready 交付
+
+每日 Gmail 在原 GitHub 趋势日报之后追加“今日小红书首选”，内容直接读取当天
+`outputs/creator_ready/YYYY-MM-DD/` 的落盘文件，不会重新评分或调用 LLM。邮件同时附带
+`creator-ready-YYYY-MM-DD.zip`；完整目录仍由 GitHub Actions Artifact 保留 14 天。
+
+在已安装并登录 GitHub CLI 的本地仓库中，可一键同步最近成功运行的 Creator Ready：
+
+```powershell
+python scripts/sync_latest_creator_ready.py
+python scripts/sync_latest_creator_ready.py --date 2026-07-18
+python scripts/sync_latest_creator_ready.py --run-id <RUN_ID>
+```
+
+如果本地同日期目录已存在，脚本默认写入带 Run ID 的冲突安全目录，不覆盖人工修改；
+只有显式增加 `--overwrite` 才会替换同日期目录。
+
 ## 安全说明
 
 - `.env`、`credentials.json`、`token.json` 均已写入 `.gitignore`，生产环境权限设为 `600`。

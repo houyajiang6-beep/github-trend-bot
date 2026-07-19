@@ -65,6 +65,8 @@ class DailyPipelineMainIntegrationTests(unittest.TestCase):
             )
 
         send_email.assert_called_once()
+        self.assertIn("今日 Creator Ready 内容不可用", send_email.call_args.args[1])
+        self.assertIn("Creator Pipeline 状态：FAILED", send_email.call_args.args[1])
         self.assertEqual(execution_status["creator_pipeline"]["status"], "failed")
         self.assertIsNone(
             execution_status["creator_pipeline"]["selected_project"]

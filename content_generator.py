@@ -474,10 +474,12 @@ class ContentGeneratorMVP:
                 )
 
         generated: list[dict[str, Any]] = []
+        generation_modes: dict[str, str] = {}
         llm_count = 0
         rejected_llm_count = 0
         for project in candidates:
-            llm_item = llm_by_name.get(str(project["project_name"]))
+            project_name = str(project["project_name"])
+            llm_item = llm_by_name.get(project_name)
             normalized = _normalize_llm_candidate(
                 project, llm_item
             )
@@ -485,8 +487,10 @@ class ContentGeneratorMVP:
                 if llm_item is not None:
                     rejected_llm_count += 1
                 generated.append(_fallback_candidate(project))
+                generation_modes[project_name] = "rules_fallback"
             else:
                 generated.append(normalized)
+                generation_modes[project_name] = "full_llm"
                 llm_count += 1
 
         generated_time = datetime.now(
@@ -500,6 +504,7 @@ class ContentGeneratorMVP:
                 "human_value_score": float(project["human_value_score"]),
                 "content_types": ["xiaohongshu_post", "video_script"],
                 "generated_time": generated_time,
+                "generation_mode": generation_modes[str(project["project_name"])],
             }
             for project in candidates
         ]

@@ -165,10 +165,24 @@ def run_daily_content_pipeline(
         )
         content_dir = run_dir / "content"
         content_paths = write_content_package(content_dir, content_package)
+        fallback_projects = [
+            item["project_name"]
+            for item in content_package.get("content_metadata") or []
+            if item.get("generation_mode") == "rules_fallback"
+        ]
+        public_content_mode = (
+            "full_llm"
+            if content_package["mode"] == "llm_and_templates"
+            else "partial_fallback"
+            if content_package["mode"] == "partial_fallback"
+            else "rules_fallback"
+        )
         status["steps"]["content_generator"] = {
             "status": "success",
             "projects": content_package["selected_projects"],
             "mode": content_package["mode"],
+            "delivery_mode": public_content_mode,
+            "fallback_projects": fallback_projects,
             "llm_calls": 1 if use_llm else 0,
             "output": str(content_dir),
         }
@@ -232,6 +246,26 @@ def run_daily_content_pipeline(
             or content_package["mode"] in {"partial_fallback", "templates_fallback"}
             else "success"
         )
+        degraded_reasons: list[str] = []
+        if content_package["mode"] == "partial_fallback":
+            degraded_reasons.append(
+                "Content Generator 对部分候选使用 rules fallback："
+                + "、".join(fallback_projects)
+            )
+        elif content_package["mode"] == "templates_fallback":
+            degraded_reasons.append(
+                (
+                    "Content Generator LLM 调用失败，全部候选使用 rules fallback："
+                    if content_package.get("llm_failed")
+                    else "Content Generator LLM 内容未通过校验，全部候选使用 rules fallback："
+                )
+                + "、".join(fallback_projects)
+            )
+        if human_report["mode"] not in {"llm_and_rules", "rules_only"}:
+            degraded_reasons.append(
+                f"Human Value 使用降级模式：{human_report['mode']}"
+            )
+        status["degraded_reasons"] = degraded_reasons
         status["finished_at"] = _now(cfg.report_timezone).isoformat()
         status_path.write_text(
             json.dumps(status, ensure_ascii=False, indent=2) + "\n",
@@ -248,6 +282,9 @@ def run_daily_content_pipeline(
             "prediction": str(creator_dir / "prediction.json"),
             "content_package": content_package,
             "selection": selection,
+            "content_generation_mode": public_content_mode,
+            "fallback_projects": fallback_projects,
+            "degraded_reasons": degraded_reasons,
         }
     except Exception as exc:
         status["status"] = "failed"
