@@ -1,10 +1,6 @@
 name: Daily GitHub Trend Report
 
 on:
-  # GitHub Actions cron uses UTC. 00:07 UTC = 08:07 Asia/Shanghai.
-  # Avoid minute 0 because GitHub documents higher schedule load at each hour boundary.
-  schedule:
-    - cron: "7 0 * * *"
   workflow_dispatch:
 
 permissions:
